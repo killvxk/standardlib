@@ -1,0 +1,22 @@
+system "ruby col > a.html"
+
+require "puppeteer-ruby"
+
+begin
+  image_path = "a.html"
+
+  browser = Puppeteer.launch #headless: false
+
+  page = browser.pages.first
+
+  page.viewport = (Puppeteer::Viewport.new(width: 1080, height: 1920))
+
+  path = "file:///#{File.expand_path(image_path)}"
+  puts path
+  page.goto(path, wait_until: "domcontentloaded")
+
+  page.screenshot(path: "pic.png", omit_background: true, full_page: true)
+  browser.close
+rescue Exception => e
+  puts "Error #{e.to_s[0..]}"
+end

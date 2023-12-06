@@ -1,0 +1,33 @@
+require 'rouge'
+
+# make some nice lexed html
+source = File.read('headers')
+formatter = Rouge::Formatters::HTML.new
+lexer = Rouge::Lexers::C.new
+body= formatter.format(lexer.lex(source))
+
+# Get some CSS
+css=Rouge::Themes::Base16.mode(:dark).render(scope: '.highlight').to_s.gsub("\n", " ")
+
+
+
+puts "<!DOCTYPE html>
+<html>
+<head>
+<style type='text/css'>
+
+#{css}
+
+</style>
+</head>
+
+<body>
+
+<div class=highlight>
+<style type=\"text/css\">
+#{css}
+</style>
+#{body.gsub("\n", "<br>")}
+</div>
+
+</body></html>"

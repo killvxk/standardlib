@@ -1,0 +1,78 @@
+#!/usr/bin/ruby
+
+data = <<INTRO
+/*
+    2023, Gregory Cohen <gregorycohen2@gmail.com>
+
+
+    DONATION REQUEST: If this free software has helped you and you find
+    it valuable, please consider making a donation to support the ongoing
+    development and maintenance of this project. Your contribution helps
+    ensure the availability of this library to the community and encourages
+    further improvements.
+
+
+                          Donations can be made at:
+                 https://www.paypal.com/paypalme/cstandardlib
+
+
+
+This code is in the public domain.
+
+You are free to use it for any commercial or noncommercial purpose.
+
+*/
+
+#ifndef _FOUNDATIONALLIB_HEADER_GUARD
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
+
+// structs (types)
+struct Dict;
+struct FrozenDict;
+struct Set;
+struct FrozenSet;
+
+
+// Functions
+INTRO
+
+# C++ is more strict, so catch more possible errors
+file_name = ARGV[0] || "funcs.cpp"
+
+if ENV['HEADERS'] == 'true'
+	puts `cat #{file_name} | grep 'FOUNDATIONAL_LIB_FUNC' | grep -v test| grep -vP '^#' | ruby -e 'STDIN.read.each_line do |line| puts line.reverse.split(/\\)/)[1].reverse + ");"; end' | grep 'FOUNDATIONAL_LIB_FUNC' | sort -u`
+	exit
+
+end
+
+#File.exist?(file_name) && (raise "%s already exists" % file_name)
+#File.exist?("with_tests") && (raise "%s already exists" % "with_tests")
+system 'clang-format -style="{BasedOnStyle: LLVM, IndentWidth: 4, UseTab: Never, IndentCaseLabels: true, ColumnLimit: 500, BreakBeforeBraces: Allman}" -i %s' % file_name
+headers = `cat #{file_name} | grep 'FOUNDATIONAL_LIB_FUNC' | grep -vP '^#' | grep -v test | ruby -e 'STDIN.read.each_line do |line| raise line unless line.include?(")"); puts line.reverse.split(/\\)/)[1].reverse + ");"; end' | grep 'FOUNDATIONAL_LIB_FUNC' | sort -u`
+main = nil
+
+data2 = data + (File.read(file_name).gsub(/(int main|(FOUNDATIONAL_LIB_FUNC (int|void) test.*?\d+))\(\)\s*.+?\n\}/m) do |i|
+  if i.match /int main/
+    main = i
+  end
+  ""
+end.gsub(/^.*test.*$/, "").to_s)
+
+if headers.strip.empty?
+	raise "No headers"
+end
+
+File.write "HEADERS.h", headers.gsub("FOUNDATIONAL_LIB_FUNC", 'static inline')
+File.write "foundationallib.h", data2.gsub("#include <assert.h>\n", "") + "\n#endif"
+File.write wtests = file_name.sub(/.cpp$/, "") + "_with_tests.cpp", data + "\n\n" + File.read(file_name) + "\n#endif"
+
+# C++ is more strict, so catch more possible errors
+cmd = "g++ -g #{wtests} -o with_tests -Wall -Wextra -Werror -Wfatal-errors && valgrind --leak-check=full ./with_tests && rm destination_file.txt ex_ample.txt existing_file.txt source_file.txt"
+puts cmd
+system cmd, exception: true
